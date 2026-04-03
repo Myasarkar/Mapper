@@ -53,23 +53,18 @@ class NetworkMonitor(private val context: Context) {
 
     private fun checkNsaStatus() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val serviceState = telephonyManager.serviceState
-            if (serviceState != null) {
-                // NR State kontrolü (NSA için)
-                // NR_STATE_CONNECTED: Cihaz 5G'ye bağlı (NSA)
-                // NR_STATE_NOT_RESTRICTED: 5G mevcut ama bağlı değil
+            try {
+                val displayInfo = telephonyManager.telephonyDisplayInfo
+                val overrideType = displayInfo.overrideNetworkType
                 
-                // NetworkRegistrationInfo listesini kontrol et
-                for (regInfo in serviceState.networkRegistrationInfoList) {
-                    if (regInfo.transportType == 1 /* TRANSPORT_TYPE_WWAN */) {
-                        val nrState = regInfo.nrState
-                        if (nrState == NetworkRegistrationInfo.NR_STATE_CONNECTED || 
-                            nrState == NetworkRegistrationInfo.NR_STATE_NOT_RESTRICTED) {
-                            _currentBand.value = BandInfo.NR(78, false) // NSA varsayımı
-                            return
-                        }
-                    }
+                if (overrideType == TelephonyDisplayInfo.OVERRIDE_NETWORK_TYPE_NR_NSA || 
+                    overrideType == TelephonyDisplayInfo.OVERRIDE_NETWORK_TYPE_NR_ADVANCED) {
+                    // Cihaz 5G NSA (Non-Standalone) modunda
+                    _currentBand.value = BandInfo.NR(78, false) 
+                    return
                 }
+            } catch (e: Exception) {
+                // Bazı cihazlarda veya durumlarda hata verebilir
             }
         }
         
