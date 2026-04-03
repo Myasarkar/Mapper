@@ -9,7 +9,7 @@ import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
 import org.osmdroid.config.Configuration
-import android.preference.PreferenceManager
+import androidx.preference.PreferenceManager
 
 @Composable
 fun MapScreen(
@@ -29,18 +29,22 @@ fun MapScreen(
             }
         },
         update = { mapView ->
-            mapView.controller.animateTo(currentLocation)
-            mapView.overlays.clear()
-
-            markers.forEach { data ->
-                val marker = Marker(mapView)
-                marker.position = data.position
-                marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                marker.title = data.bandName
-                mapView.overlays.add(marker)
+            // Sadece konum değiştiğinde merkeze al (Kullanıcı haritayı kaydırıyorsa bozmamak için)
+            // mapView.controller.animateTo(currentLocation) 
+            
+            // Mevcut overlay sayısını kontrol et, eğer liste boyutu farklıysa güncelle
+            if (mapView.overlays.size != markers.size) {
+                mapView.overlays.clear()
+                markers.forEach { data ->
+                    val marker = Marker(mapView)
+                    marker.position = data.position
+                    marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                    marker.title = data.bandName
+                    // Marker rengini burada data.color'a göre özelleştirebilirsin (İkon değiştirerek)
+                    mapView.overlays.add(marker)
+                }
+                mapView.invalidate()
             }
-
-            mapView.invalidate()
         }
     )
 }

@@ -63,16 +63,24 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun MainLayout() {
         val bandInfo by networkMonitor.currentBand.collectAsState()
-        var currentLocation by remember { mutableStateOf(GeoPoint(41.0082, 28.9784)) } // Varsayılan İstanbul
+        var currentLocation by remember { mutableStateOf(GeoPoint(41.0082, 28.9784)) }
 
-        // Her 5 saniyede bir veri kaydı simülasyonu (Gerçek konum servisi ile bağlanmalı)
+        // Simülasyon: Konumu hafifçe kaydırarak marker'ların üst üste binmesini engelle
         LaunchedEffect(Unit) {
+            var lat = 41.0082
+            var lon = 28.9784
             while (true) {
                 delay(5000)
                 networkMonitor.updateNetworkInfo()
+                
+                // Rastgele küçük hareket simülasyonu
+                lat += (Math.random() - 0.5) * 0.001
+                lon += (Math.random() - 0.5) * 0.001
+                currentLocation = GeoPoint(lat, lon)
                 
                 val color = when (bandInfo) {
                     is NetworkMonitor.BandInfo.NR -> {

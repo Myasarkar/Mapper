@@ -59,6 +59,7 @@ dependencies {
     
     // OpenStreetMap (Osmdroid) - API anahtarı gerektirmez
     implementation 'org.osmdroid:osmdroid-android:6.1.18'
+    implementation 'androidx.preference:preference-ktx:1.2.1'
     implementation 'com.google.android.gms:play-services-location:21.1.0'
 
     testImplementation 'junit:junit:4.13.2'
