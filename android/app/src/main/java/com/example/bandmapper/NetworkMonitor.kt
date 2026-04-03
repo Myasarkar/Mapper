@@ -47,35 +47,32 @@ class NetworkMonitor(private val context: Context) {
 
     private fun processCells(cells: List<ICell>) {
         // 1. Standalone (SA) 5G Kontrolü
-        // 1.3.0 sürümünde CellNr sınıfı ve paket yapısı farklı olabilir, 
-        // bu yüzden "NR" tipindeki hücreleri genel bir kontrolle buluyoruz.
-        val nrCell = cells.firstOrNull { it.connectionStatus is PrimaryConnection && it.javaClass.simpleName.contains("Nr", ignoreCase = true) }
+        // 1.3.0 sürümünde CellNr ve PrimaryConnection sınıfları standarttır.
+        val nrCell = cells.filterIsInstance<CellNr>().firstOrNull { it.connectionStatus is PrimaryConnection }
         
         if (nrCell != null) {
-            // Band bilgisini güvenli bir şekilde almaya çalış
-            // Eski sürümlerde 'band' nesnesi olmayabilir veya farklı olabilir
-            _currentBand.value = BandInfo.NR(78, true) // SA varsayımı
+            // Band bilgisini doğrudan al (n78 gibi)
+            val band = nrCell.band?.number ?: 78
+            _currentBand.value = BandInfo.NR(band, true) // SA
             return
         }
 
         // 2. Non-Standalone (NSA) 5G Kontrolü
-        // LTE hücresinde 5G desteği olup olmadığını kontrol et
-        // 1.3.0 sürümünde 'isNrAvailable' yerine 'nrAvailable' veya benzeri olabilir
-        val lteWithNr = cells.firstOrNull { 
-            it.connectionStatus is PrimaryConnection && 
-            it.javaClass.simpleName.contains("Lte", ignoreCase = true) &&
-            (it.toString().contains("nrAvailable=true", ignoreCase = true) || it.toString().contains("isNrAvailable=true", ignoreCase = true))
+        // LTE hücresinde 5G (NR) desteği olup olmadığını kontrol et
+        val lteWithNr = cells.filterIsInstance<CellLte>().firstOrNull { 
+            it.connectionStatus is PrimaryConnection && it.isNrAvailable 
         }
         
         if (lteWithNr != null) {
+            // NSA durumunda genellikle n78 bandı kullanılır
             _currentBand.value = BandInfo.NR(78, false) // NSA
             return
         }
 
         // 3. Standart LTE Kontrolü
-        val lteCell = cells.firstOrNull { it.connectionStatus is PrimaryConnection && it.javaClass.simpleName.contains("Lte", ignoreCase = true) }
+        val lteCell = cells.filterIsInstance<CellLte>().firstOrNull { it.connectionStatus is PrimaryConnection }
         if (lteCell != null) {
-            _currentBand.value = BandInfo.LTE(0)
+            _currentBand.value = BandInfo.LTE(lteCell.pci ?: 0)
             return
         }
 
