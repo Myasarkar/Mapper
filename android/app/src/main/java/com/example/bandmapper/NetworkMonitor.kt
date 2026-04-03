@@ -23,7 +23,6 @@ import cz.mroczis.netmonster.core.model.cell.ICell
 import cz.mroczis.netmonster.core.model.connection.PrimaryConnection
 import cz.mroczis.netmonster.core.model.cell.CellNr
 import cz.mroczis.netmonster.core.model.cell.CellLte
-import cz.mroczis.netmonster.core.model.network.NetworkType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -57,16 +56,17 @@ class NetworkMonitor(private val context: Context) {
     private fun processCells(cells: List<ICell>) {
         // 1. Şebeke Tipini Al
         val networkType = netMonster.getNetworkType(subscriptionId)
+        val networkTypeStr = networkType.toString()
 
         // 2. 5G NSA Kontrolü
-        if (networkType is NetworkType.Lte.Nsa || networkType.toString().contains("Nsa", ignoreCase = true)) {
+        if (networkTypeStr.contains("Nsa", ignoreCase = true)) {
             _currentBand.value = BandInfo.NR(78, false)
             return
         }
 
         // 3. 5G SA Kontrolü
         val nrCell = cells.filterIsInstance<CellNr>().firstOrNull { it.connectionStatus is PrimaryConnection }
-        if (nrCell != null || networkType is NetworkType.Nr.Sa) {
+        if (nrCell != null || networkTypeStr.contains("Sa", ignoreCase = true)) {
             val band = (nrCell as? CellNr)?.band?.number ?: 78
             _currentBand.value = BandInfo.NR(band, true)
             return
