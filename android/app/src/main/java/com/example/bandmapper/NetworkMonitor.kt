@@ -18,12 +18,12 @@ package com.example.bandmapper
 
 import android.content.Context
 import android.telephony.*
-import cz.mroczis.netmonster.core.factory.NetMonsterFactory
-import cz.mroczis.netmonster.core.model.cell.ICell
-import cz.mroczis.netmonster.core.model.connection.PrimaryConnection
+import cz.mroczis.netmonster.core.model.NetworkType
 import cz.mroczis.netmonster.core.model.cell.CellNr
 import cz.mroczis.netmonster.core.model.cell.CellLte
-import cz.mroczis.netmonster.core.model.network.NetworkType
+import cz.mroczis.netmonster.core.model.cell.ICell
+import cz.mroczis.netmonster.core.model.connection.PrimaryConnection
+import cz.mroczis.netmonster.core.factory.NetMonsterFactory
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
