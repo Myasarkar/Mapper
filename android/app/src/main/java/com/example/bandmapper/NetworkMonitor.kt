@@ -59,7 +59,7 @@ class NetworkMonitor(private val context: Context) {
         val networkType = netMonster.getNetworkType(subscriptionId)
 
         // 2. 5G NSA Kontrolü
-        if (networkType is NetworkType.Nr.Nsa) {
+        if (networkType is NetworkType.Lte.Nsa || networkType.toString().contains("Nsa", ignoreCase = true)) {
             _currentBand.value = BandInfo.NR(78, false)
             return
         }
