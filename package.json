@@ -1,0 +1,8 @@
+{
+  "name": "5g-band-mapper-android",
+  "version": "1.0.0",
+  "description": "Android 5G n78 Band Mapper Project",
+  "scripts": {
+    "build": "echo 'This is a native Android project. Use GitHub Actions to build APK.'"
+  }
+}

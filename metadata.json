@@ -1,0 +1,8 @@
+{
+  "name": "5G n78 Band Mapper",
+  "description": "Android için 5G n78 (3500MHz) bandı tespit ve haritalama uygulaması projesi.",
+  "requestFramePermissions": [
+    "location",
+    "camera"
+  ]
+}
