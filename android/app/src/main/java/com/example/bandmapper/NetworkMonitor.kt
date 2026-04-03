@@ -21,6 +21,7 @@ import android.telephony.*
 import cz.mroczis.netmonster.core.factory.NetMonsterFactory
 import cz.mroczis.netmonster.core.model.cell.ICell
 import cz.mroczis.netmonster.core.model.connection.PrimaryConnection
+import cz.mroczis.netmonster.core.model.connection.SecondaryConnection
 import cz.mroczis.netmonster.core.model.cell.CellNr
 import cz.mroczis.netmonster.core.model.cell.CellLte
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -58,17 +59,27 @@ class NetworkMonitor(private val context: Context) {
         val networkType = netMonster.getNetworkType(subscriptionId)
         val networkTypeStr = networkType.toString()
 
-        // 2. 5G NSA Kontrolü
-        if (networkTypeStr.contains("Nsa", ignoreCase = true)) {
-            _currentBand.value = BandInfo.NR(78, false)
+        // 2. 5G Hücresi Var mı? (Hem SA hem NSA için en güvenilir yol)
+        // SecondaryConnection NSA modunda veri taşıyan 5G hücresini temsil eder
+        val nrCell = cells.filterIsInstance<CellNr>().firstOrNull { 
+            it.connectionStatus is PrimaryConnection || it.connectionStatus is SecondaryConnection 
+        }
+
+        if (nrCell != null) {
+            val band = nrCell.band?.number ?: 0
+            val isSA = networkTypeStr.contains("Sa", ignoreCase = true)
+            _currentBand.value = BandInfo.NR(band, isSA)
             return
         }
 
-        // 3. 5G SA Kontrolü
-        val nrCell = cells.filterIsInstance<CellNr>().firstOrNull { it.connectionStatus is PrimaryConnection }
-        if (nrCell != null || networkTypeStr.contains("Sa", ignoreCase = true)) {
-            val band = (nrCell as? CellNr)?.band?.number ?: 78
-            _currentBand.value = BandInfo.NR(band, true)
+        // 3. Eğer hücre listesinde NR yoksa ama şebeke tipi 5G diyorsa (Bazen hücre detayları gelmez)
+        if (networkTypeStr.contains("Nsa", ignoreCase = true)) {
+            _currentBand.value = BandInfo.NR(0, false) // Band 0 = Bilinmiyor/Tespit Edilemedi
+            return
+        }
+        
+        if (networkTypeStr.contains("Sa", ignoreCase = true)) {
+            _currentBand.value = BandInfo.NR(0, true)
             return
         }
 

@@ -148,7 +148,6 @@ class MainActivity : ComponentActivity() {
         var centerTrigger by remember { mutableStateOf(0) }
 
         // nPerf Tarzı Haritalama Mantığı
-        // Her konum veya bant değiştiğinde iz bırak
         LaunchedEffect(currentLocation, bandInfo) {
             val color = when (bandInfo) {
                 is NetworkMonitor.BandInfo.NR -> {
@@ -164,18 +163,20 @@ class MainActivity : ComponentActivity() {
             }
             
             val bandName = when (bandInfo) {
-                is NetworkMonitor.BandInfo.NR -> "n${(bandInfo as NetworkMonitor.BandInfo.NR).bandIndex}"
+                is NetworkMonitor.BandInfo.NR -> {
+                    val band = (bandInfo as NetworkMonitor.BandInfo.NR).bandIndex
+                    if (band > 0) "n$band" else "5G"
+                }
                 is NetworkMonitor.BandInfo.LTE -> "LTE"
                 else -> "Sinyal Yok"
             }
             
-            // Eğer son eklenen nokta ile aynı konumdaysak ekleme (gereksiz kalabalığı önlemek için)
             if (markers.isEmpty() || markers.last().position != currentLocation) {
                 markers.add(MapMarkerData(currentLocation, color, bandName))
             }
         }
 
-        // Periyodik şebeke güncellemesi (subscribe çalışmazsa yedek olarak)
+        // Periyodik şebeke güncellemesi
         LaunchedEffect(Unit) {
             while(true) {
                 networkMonitor.updateNetworkInfo()
@@ -185,7 +186,13 @@ class MainActivity : ComponentActivity() {
 
         Scaffold(
             topBar = {
-                TopAppBar(title = { Text("5G n78 Mapper") })
+                TopAppBar(
+                    title = { Text("5G Band Mapper", fontWeight = FontWeight.Bold) },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.surface,
+                        titleContentColor = MaterialTheme.colorScheme.onSurface
+                    )
+                )
             },
             floatingActionButton = {
                 FloatingActionButton(onClick = {
@@ -195,7 +202,11 @@ class MainActivity : ComponentActivity() {
                 }
             }
         ) { padding ->
-            Column(modifier = Modifier.padding(padding)) {
+            Column(
+                modifier = Modifier
+                    .padding(padding)
+                    .fillMaxSize()
+            ) {
                 // Üst Gösterge Paneli
                 BandIndicator(bandInfo)
                 
@@ -217,7 +228,13 @@ class MainActivity : ComponentActivity() {
                     28 -> Color(0xFFFFA500) // Orange
                     else -> Color.Blue
                 }
-                Triple("n${nr.bandIndex} (${if (nr.bandIndex == 78) "3500MHz" else "700MHz"})", bandColor, if (nr.isSA) "5G Standalone" else "5G NSA")
+                val bandName = if (nr.bandIndex > 0) "n${nr.bandIndex}" else "5G"
+                val freq = when(nr.bandIndex) {
+                    78 -> "3500MHz"
+                    28 -> "700MHz"
+                    else -> "Bilinmiyor"
+                }
+                Triple("$bandName ($freq)", bandColor, if (nr.isSA) "5G Standalone" else "5G NSA")
             }
             is NetworkMonitor.BandInfo.LTE -> Triple("4G LTE", Color.Gray, "LTE")
             else -> Triple("Sinyal Yok", Color.Red, "Bilinmiyor")
@@ -226,23 +243,36 @@ class MainActivity : ComponentActivity() {
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f))
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
         ) {
             Row(
-                modifier = Modifier.padding(16.dp),
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
                     modifier = Modifier
-                        .size(60.dp)
+                        .size(52.dp)
                         .clip(CircleShape)
                         .background(color)
                 )
                 Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    Text(text, fontSize = 24.sp, fontWeight = FontWeight.Bold)
-                    Text(subText, fontSize = 14.sp, color = Color.Gray)
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = text,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        lineHeight = 28.sp
+                    )
+                    Text(
+                        text = subText,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }
