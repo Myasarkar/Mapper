@@ -58,13 +58,17 @@ class NetworkMonitor(private val context: Context) {
                 // NR State kontrolü (NSA için)
                 // NR_STATE_CONNECTED: Cihaz 5G'ye bağlı (NSA)
                 // NR_STATE_NOT_RESTRICTED: 5G mevcut ama bağlı değil
-                val nrState = serviceState.nrState
-                if (nrState == NetworkRegistrationInfo.NR_STATE_CONNECTED || 
-                    nrState == NetworkRegistrationInfo.NR_STATE_NOT_RESTRICTED) {
-                    // NSA durumunda bandı tam olarak CellInfo olmadan bilemeyebiliriz 
-                    // ama n78 varsayımı veya genel 5G gösterimi yapabiliriz.
-                    _currentBand.value = BandInfo.NR(78, false) // NSA varsayımı
-                    return
+                
+                // NetworkRegistrationInfo listesini kontrol et
+                for (regInfo in serviceState.networkRegistrationInfoList) {
+                    if (regInfo.transportType == 1 /* TRANSPORT_TYPE_WWAN */) {
+                        val nrState = regInfo.nrState
+                        if (nrState == NetworkRegistrationInfo.NR_STATE_CONNECTED || 
+                            nrState == NetworkRegistrationInfo.NR_STATE_NOT_RESTRICTED) {
+                            _currentBand.value = BandInfo.NR(78, false) // NSA varsayımı
+                            return
+                        }
+                    }
                 }
             }
         }
