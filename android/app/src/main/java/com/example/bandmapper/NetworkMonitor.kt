@@ -4,15 +4,20 @@ import android.content.Context
 import android.telephony.*
 import android.os.Build
 import androidx.annotation.RequiresApi
+import cz.mroczis.netmonster.core.factory.NetMonsterFactory
+import cz.mroczis.netmonster.core.model.cell.ICell
+import cz.mroczis.netmonster.core.model.connection.PrimaryConnection
+import cz.mroczis.netmonster.core.model.nr.CellNr
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
  * Şebeke bilgilerini ve 5G bandını tespit eden sınıf.
+ * NetMonster-core kütüphanesini kullanarak profesyonel tespit yapar.
  */
 class NetworkMonitor(private val context: Context) {
 
-    private val telephonyManager = context.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
+    private val netMonster = NetMonsterFactory.get(context)
 
     // Bağlı olunan bandın bilgisini tutan akış
     private val _currentBand = MutableStateFlow<BandInfo>(BandInfo.Unknown)
@@ -24,72 +29,44 @@ class NetworkMonitor(private val context: Context) {
         data class LTE(val pci: Int) : BandInfo()
     }
 
-    @RequiresApi(Build.VERSION_CODES.Q)
     fun updateNetworkInfo() {
         try {
-            // Tüm hücre bilgilerini al
-            val allCellInfo = telephonyManager.allCellInfo
+            // NetMonster ile tüm hücre bilgilerini al
+            val cells = netMonster.getCells()
             
-            if (!allCellInfo.isNullOrEmpty()) {
-                for (info in allCellInfo) {
-                    if (info is CellInfoNr && info.isRegistered) {
-                        // 5G NR tespiti (Standalone)
-                        val nr = info.cellIdentity as CellIdentityNr
-                        val band = getBandFromArfcn(nr.nrarfcn)
-                        val isSA = info.cellConnectionStatus == CellInfo.CONNECTION_PRIMARY_SERVING
-                        _currentBand.value = BandInfo.NR(band, isSA)
-                        return
-                    }
-                }
+            // 1. Standalone (SA) 5G Kontrolü
+            val nrCell = cells.filterIsInstance<CellNr>().firstOrNull { it.connectionStatus is PrimaryConnection }
+            if (nrCell != null) {
+                val band = nrCell.band?.number ?: 0
+                _currentBand.value = BandInfo.NR(band, true)
+                return
             }
 
-            // Eğer CellInfoNr bulunamadıysa NSA (Non-Standalone) kontrolü yap
-            checkNsaStatus()
+            // 2. Non-Standalone (NSA) 5G Kontrolü
+            // NetMonster, NSA durumunu cihazın "Physical Channel Config" veya "Service State" 
+            // üzerinden otomatik olarak normalize eder.
+            val isNsa = cells.any { it.connectionStatus is PrimaryConnection && it is cz.mroczis.netmonster.core.model.lte.CellLte && it.isNrAvailable }
+            
+            if (isNsa) {
+                // NSA durumunda bandı tam olarak bilemeyebiliriz ama genellikle n78'dir.
+                // NetMonster bazen NSA bandını da yakalayabilir.
+                _currentBand.value = BandInfo.NR(78, false)
+                return
+            }
+
+            // 3. LTE Kontrolü
+            val lteCell = cells.filterIsInstance<cz.mroczis.netmonster.core.model.lte.CellLte>().firstOrNull { it.connectionStatus is PrimaryConnection }
+            if (lteCell != null) {
+                _currentBand.value = BandInfo.LTE(lteCell.pci ?: 0)
+                return
+            }
+
+            _currentBand.value = BandInfo.Unknown
 
         } catch (e: SecurityException) {
             // İzin hatası
-        }
-    }
-
-    private fun checkNsaStatus() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            try {
-                val serviceState = telephonyManager.serviceState
-                if (serviceState != null) {
-                    // DOMAIN_PS (2) ve TRANSPORT_TYPE_WWAN (1) bilgilerini al
-                    val nri = serviceState.getNetworkRegistrationInfo(
-                        NetworkRegistrationInfo.DOMAIN_PS,
-                        1 // TRANSPORT_TYPE_WWAN
-                    )
-                    
-                    if (nri != null) {
-                        // NR_STATE_CONNECTED (3) veya NR_STATE_NOT_RESTRICTED (2)
-                        val nrState = nri.getNrState()
-                        if (nrState == NetworkRegistrationInfo.NR_STATE_CONNECTED || 
-                            nrState == NetworkRegistrationInfo.NR_STATE_NOT_RESTRICTED) {
-                            _currentBand.value = BandInfo.NR(78, false) // NSA varsayımı
-                            return
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                // Bazı cihazlarda hata verebilir
-            }
-        }
-        
-        // Hiçbiri değilse LTE veya Bilinmiyor
-        _currentBand.value = BandInfo.LTE(0)
-    }
-
-    /**
-     * NR-ARFCN değerinden band numarasını hesaplayan yardımcı fonksiyon.
-     * n78: 620000 - 653333 arası (yaklaşık)
-     */
-    private fun getBandFromArfcn(arfcn: Int): Int {
-        return when {
-            arfcn in 620000..653333 -> 78
-            arfcn in 151600..160600 -> 28
-            else -> 0 // Diğer bantlar için genişletilebilir
+        } catch (e: Exception) {
+            _currentBand.value = BandInfo.Unknown
         }
     }
 }
