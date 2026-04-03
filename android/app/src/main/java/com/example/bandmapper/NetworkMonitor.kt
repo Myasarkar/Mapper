@@ -18,12 +18,6 @@ package com.example.bandmapper
 
 import android.content.Context
 import android.telephony.*
-import `app`.netmonster.core.factory.NetMonsterFactory
-import `app`.netmonster.core.model.cell.ICell
-import `app`.netmonster.core.model.connection.PrimaryConnection
-import `app`.netmonster.core.model.cell.CellNr
-import `app`.netmonster.core.model.cell.CellLte
-import `app`.netmonster.core.model.network.NetworkType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -33,10 +27,10 @@ import kotlinx.coroutines.flow.StateFlow
  */
 class NetworkMonitor(private val context: Context) {
 
-    private val netMonster = NetMonsterFactory.get(context)
+    // Tam paket yolu kullanarak çakışmayı önlüyoruz
+    private val netMonster = app.netmonster.core.factory.NetMonsterFactory.get(context)
     private val subscriptionId = SubscriptionManager.DEFAULT_SUBSCRIPTION_ID
 
-    // Bağlı olunan bandın bilgisini tutan akış
     private val _currentBand = MutableStateFlow<BandInfo>(BandInfo.Unknown)
     val currentBand: StateFlow<BandInfo> = _currentBand
 
@@ -46,34 +40,35 @@ class NetworkMonitor(private val context: Context) {
         data class LTE(val pci: Int) : BandInfo()
     }
 
-    fun startMonitoring() {
-        // Periyodik güncelleme MainActivity'de yapılıyor
-    }
+    fun startMonitoring() {}
+    fun stopMonitoring() {}
 
-    fun stopMonitoring() {
-        // Temizlik işlemleri
-    }
-
-    private fun processCells(cells: List<ICell>) {
-        // 1. Şebeke Tipini Al
+    private fun processCells(cells: List<app.netmonster.core.model.cell.ICell>) {
+        // Şebeke tipini tam yol ile kontrol et
         val networkType = netMonster.getNetworkType(subscriptionId)
 
-        // 2. 5G NSA Kontrolü
-        if (networkType is NetworkType.Nr.Nsa) {
+        // 5G NSA Kontrolü
+        if (networkType is app.netmonster.core.model.NetworkType.Nr.Nsa) {
             _currentBand.value = BandInfo.NR(78, false)
             return
         }
 
-        // 3. 5G SA Kontrolü
-        val nrCell = cells.filterIsInstance<CellNr>().firstOrNull { it.connectionStatus is PrimaryConnection }
-        if (nrCell != null || networkType is NetworkType.Nr.Sa) {
-            val band = (nrCell as? CellNr)?.band?.number ?: 78
+        // 5G SA Kontrolü
+        val nrCell = cells.filterIsInstance<app.netmonster.core.model.cell.CellNr>().firstOrNull { 
+            it.connectionStatus is app.netmonster.core.model.connection.PrimaryConnection 
+        }
+        
+        if (nrCell != null || networkType is app.netmonster.core.model.NetworkType.Nr.Sa) {
+            val band = (nrCell as? app.netmonster.core.model.cell.CellNr)?.band?.number ?: 78
             _currentBand.value = BandInfo.NR(band, true)
             return
         }
 
-        // 4. Standart LTE Kontrolü
-        val lteCell = cells.filterIsInstance<CellLte>().firstOrNull { it.connectionStatus is PrimaryConnection }
+        // Standart LTE Kontrolü
+        val lteCell = cells.filterIsInstance<app.netmonster.core.model.cell.CellLte>().firstOrNull { 
+            it.connectionStatus is app.netmonster.core.model.connection.PrimaryConnection 
+        }
+        
         if (lteCell != null) {
             _currentBand.value = BandInfo.LTE(lteCell.pci ?: 0)
             return
