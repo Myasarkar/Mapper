@@ -18,12 +18,12 @@ package com.example.bandmapper
 
 import android.content.Context
 import android.telephony.*
-import app.netmonster.core.factory.NetMonsterFactory
-import app.netmonster.core.model.cell.ICell
-import app.netmonster.core.model.connection.PrimaryConnection
-import app.netmonster.core.model.cell.CellNr
-import app.netmonster.core.model.cell.CellLte
-import app.netmonster.core.model.network.NetworkType
+import cz.mroczis.netmonster.core.factory.NetMonsterFactory
+import cz.mroczis.netmonster.core.model.cell.ICell
+import cz.mroczis.netmonster.core.model.connection.PrimaryConnection
+import cz.mroczis.netmonster.core.model.cell.CellNr
+import cz.mroczis.netmonster.core.model.cell.CellLte
+import cz.mroczis.netmonster.core.model.network.NetworkType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -55,12 +55,11 @@ class NetworkMonitor(private val context: Context) {
     }
 
     private fun processCells(cells: List<ICell>) {
-        // 1. Şebeke Tipini Al (Dokümantasyondaki önerilen yöntem)
+        // 1. Şebeke Tipini Al
         val networkType = netMonster.getNetworkType(subscriptionId)
 
         // 2. 5G NSA Kontrolü
         if (networkType is NetworkType.Nr.Nsa) {
-            // NSA durumunda n78 yaygındır
             _currentBand.value = BandInfo.NR(78, false)
             return
         }
