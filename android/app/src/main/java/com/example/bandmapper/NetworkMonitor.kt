@@ -8,6 +8,7 @@ import cz.mroczis.netmonster.core.factory.NetMonsterFactory
 import cz.mroczis.netmonster.core.model.cell.ICell
 import cz.mroczis.netmonster.core.model.connection.PrimaryConnection
 import cz.mroczis.netmonster.core.model.nr.CellNr
+import cz.mroczis.netmonster.core.model.lte.CellLte
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -54,15 +55,19 @@ class NetworkMonitor(private val context: Context) {
         }
 
         // 2. Non-Standalone (NSA) 5G Kontrolü
-        val isNsa = cells.any { it.connectionStatus is PrimaryConnection && it is cz.mroczis.netmonster.core.model.lte.CellLte && it.isNrAvailable }
+        // LTE hücresinde 5G (NR) desteği olup olmadığını kontrol et
+        val lteWithNr = cells.filterIsInstance<CellLte>().firstOrNull { 
+            it.connectionStatus is PrimaryConnection && it.isNrAvailable 
+        }
         
-        if (isNsa) {
+        if (lteWithNr != null) {
+            // NSA durumunda genellikle n78 bandı kullanılır
             _currentBand.value = BandInfo.NR(78, false)
             return
         }
 
-        // 3. LTE Kontrolü
-        val lteCell = cells.filterIsInstance<cz.mroczis.netmonster.core.model.lte.CellLte>().firstOrNull { it.connectionStatus is PrimaryConnection }
+        // 3. Standart LTE Kontrolü
+        val lteCell = cells.filterIsInstance<CellLte>().firstOrNull { it.connectionStatus is PrimaryConnection }
         if (lteCell != null) {
             _currentBand.value = BandInfo.LTE(lteCell.pci ?: 0)
             return

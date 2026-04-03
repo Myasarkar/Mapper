@@ -63,7 +63,7 @@ dependencies {
     implementation 'com.google.android.gms:play-services-location:21.1.0'
     
     // NetMonster Core - Profesyonel Şebeke İzleme Kütüphanesi
-    implementation 'cz.mroczis.netmonster:netmonster-core:2.2.1'
+    implementation 'com.github.mroczis:netmonster-core:2.2.1'
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
