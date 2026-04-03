@@ -29,40 +29,52 @@ class NetworkMonitor(private val context: Context) {
         data class LTE(val pci: Int) : BandInfo()
     }
 
+    private var listener: cz.mroczis.netmonster.core.INetMonster.ISubscription? = null
+
+    fun startMonitoring() {
+        listener = netMonster.subscribe(object : cz.mroczis.netmonster.core.INetMonster.IOnCellsUpdatedListener {
+            override fun onCellsUpdated(cells: List<ICell>) {
+                processCells(cells)
+            }
+        })
+    }
+
+    fun stopMonitoring() {
+        listener?.destroy()
+        listener = null
+    }
+
+    private fun processCells(cells: List<ICell>) {
+        // 1. Standalone (SA) 5G Kontrolü
+        val nrCell = cells.filterIsInstance<CellNr>().firstOrNull { it.connectionStatus is PrimaryConnection }
+        if (nrCell != null) {
+            val band = nrCell.band?.number ?: 0
+            _currentBand.value = BandInfo.NR(band, true)
+            return
+        }
+
+        // 2. Non-Standalone (NSA) 5G Kontrolü
+        val isNsa = cells.any { it.connectionStatus is PrimaryConnection && it is cz.mroczis.netmonster.core.model.lte.CellLte && it.isNrAvailable }
+        
+        if (isNsa) {
+            _currentBand.value = BandInfo.NR(78, false)
+            return
+        }
+
+        // 3. LTE Kontrolü
+        val lteCell = cells.filterIsInstance<cz.mroczis.netmonster.core.model.lte.CellLte>().firstOrNull { it.connectionStatus is PrimaryConnection }
+        if (lteCell != null) {
+            _currentBand.value = BandInfo.LTE(lteCell.pci ?: 0)
+            return
+        }
+
+        _currentBand.value = BandInfo.Unknown
+    }
+
     fun updateNetworkInfo() {
         try {
-            // NetMonster ile tüm hücre bilgilerini al
             val cells = netMonster.getCells()
-            
-            // 1. Standalone (SA) 5G Kontrolü
-            val nrCell = cells.filterIsInstance<CellNr>().firstOrNull { it.connectionStatus is PrimaryConnection }
-            if (nrCell != null) {
-                val band = nrCell.band?.number ?: 0
-                _currentBand.value = BandInfo.NR(band, true)
-                return
-            }
-
-            // 2. Non-Standalone (NSA) 5G Kontrolü
-            // NetMonster, NSA durumunu cihazın "Physical Channel Config" veya "Service State" 
-            // üzerinden otomatik olarak normalize eder.
-            val isNsa = cells.any { it.connectionStatus is PrimaryConnection && it is cz.mroczis.netmonster.core.model.lte.CellLte && it.isNrAvailable }
-            
-            if (isNsa) {
-                // NSA durumunda bandı tam olarak bilemeyebiliriz ama genellikle n78'dir.
-                // NetMonster bazen NSA bandını da yakalayabilir.
-                _currentBand.value = BandInfo.NR(78, false)
-                return
-            }
-
-            // 3. LTE Kontrolü
-            val lteCell = cells.filterIsInstance<cz.mroczis.netmonster.core.model.lte.CellLte>().firstOrNull { it.connectionStatus is PrimaryConnection }
-            if (lteCell != null) {
-                _currentBand.value = BandInfo.LTE(lteCell.pci ?: 0)
-                return
-            }
-
-            _currentBand.value = BandInfo.Unknown
-
+            processCells(cells)
         } catch (e: SecurityException) {
             // İzin hatası
         } catch (e: Exception) {

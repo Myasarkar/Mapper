@@ -28,6 +28,8 @@ import com.example.bandmapper.ui.theme.BandMapperTheme
 import com.google.android.gms.location.*
 import org.osmdroid.util.GeoPoint
 import kotlinx.coroutines.delay
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 
 class MainActivity : ComponentActivity() {
 
@@ -100,6 +102,16 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        networkMonitor.startMonitoring()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        networkMonitor.stopMonitoring()
+    }
+
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun MainLayout() {
@@ -107,26 +119,30 @@ class MainActivity : ComponentActivity() {
         val currentLocation by currentLocationState
         var centerTrigger by remember { mutableStateOf(0) }
 
-        // Periyodik veri kaydı
-        LaunchedEffect(Unit) {
-            while (true) {
-                delay(5000)
-                networkMonitor.updateNetworkInfo()
-                
-                val color = when (bandInfo) {
-                    is NetworkMonitor.BandInfo.NR -> {
-                        val nr = bandInfo as NetworkMonitor.BandInfo.NR
-                        if (nr.bandIndex == 78) Color.Green else Color.Blue
+        // nPerf Tarzı Haritalama Mantığı
+        // Her konum veya bant değiştiğinde iz bırak
+        LaunchedEffect(currentLocation, bandInfo) {
+            val color = when (bandInfo) {
+                is NetworkMonitor.BandInfo.NR -> {
+                    val nr = bandInfo as NetworkMonitor.BandInfo.NR
+                    when (nr.bandIndex) {
+                        78 -> Color.Green
+                        28 -> Color(0xFFFFA500) // Orange
+                        else -> Color.Blue
                     }
-                    else -> Color.Gray
                 }
-                
-                val bandName = when (bandInfo) {
-                    is NetworkMonitor.BandInfo.NR -> "n${(bandInfo as NetworkMonitor.BandInfo.NR).bandIndex}"
-                    is NetworkMonitor.BandInfo.LTE -> "LTE"
-                    else -> "Bilinmiyor"
-                }
-                
+                is NetworkMonitor.BandInfo.LTE -> Color.Gray
+                else -> Color.Red
+            }
+            
+            val bandName = when (bandInfo) {
+                is NetworkMonitor.BandInfo.NR -> "n${(bandInfo as NetworkMonitor.BandInfo.NR).bandIndex}"
+                is NetworkMonitor.BandInfo.LTE -> "LTE"
+                else -> "Sinyal Yok"
+            }
+            
+            // Eğer son eklenen nokta ile aynı konumdaysak ekleme (gereksiz kalabalığı önlemek için)
+            if (markers.isEmpty() || markers.last().position != currentLocation) {
                 markers.add(MapMarkerData(currentLocation, color, bandName))
             }
         }
@@ -160,11 +176,12 @@ class MainActivity : ComponentActivity() {
         val (text, color, subText) = when (bandInfo) {
             is NetworkMonitor.BandInfo.NR -> {
                 val nr = bandInfo
-                if (nr.bandIndex == 78) {
-                    Triple("n78 (3500MHz)", Color.Green, if (nr.isSA) "5G Standalone" else "5G NSA")
-                } else {
-                    Triple("n${nr.bandIndex}", Color.Blue, "5G NR")
+                val bandColor = when (nr.bandIndex) {
+                    78 -> Color.Green
+                    28 -> Color(0xFFFFA500) // Orange
+                    else -> Color.Blue
                 }
+                Triple("n${nr.bandIndex} (${if (nr.bandIndex == 78) "3500MHz" else "700MHz"})", bandColor, if (nr.isSA) "5G Standalone" else "5G NSA")
             }
             is NetworkMonitor.BandInfo.LTE -> Triple("4G LTE", Color.Gray, "LTE")
             else -> Triple("Sinyal Yok", Color.Red, "Bilinmiyor")

@@ -12,6 +12,11 @@ import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
 import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import org.osmdroid.config.Configuration
 import androidx.preference.PreferenceManager
+import androidx.compose.ui.graphics.toArgb
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.drawable.BitmapDrawable
 
 @Composable
 fun MapScreen(
@@ -50,7 +55,18 @@ fun MapScreen(
                 markers.forEach { data ->
                     val marker = Marker(view)
                     marker.position = data.position
-                    marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
+                    marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                    
+                    // nPerf tarzı küçük nokta ikonu oluştur
+                    val size = 20
+                    val bitmap = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+                    val canvas = android.graphics.Canvas(bitmap)
+                    val paint = android.graphics.Paint()
+                    paint.color = data.color.toArgb()
+                    paint.isAntiAlias = true
+                    canvas.drawCircle(size / 2f, size / 2f, size / 2f, paint)
+                    
+                    marker.icon = android.graphics.drawable.BitmapDrawable(context.resources, bitmap)
                     marker.title = "${data.bandName} Band"
                     view.overlays.add(marker)
                 }
