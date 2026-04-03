@@ -29,24 +29,21 @@ class NetworkMonitor(private val context: Context) {
         try {
             // Tüm hücre bilgilerini al
             val allCellInfo = telephonyManager.allCellInfo
-            if (allCellInfo.isNullOrEmpty()) return
-
-            for (info in allCellInfo) {
-                if (info is CellInfoNr && info.isRegistered) {
-                    // 5G NR tespiti
-                    val nr = info.cellIdentity as CellIdentityNr
-                    val band = getBandFromArfcn(nr.nrarfcn)
-                    
-                    // SA (Standalone) kontrolü
-                    val isSA = info.cellConnectionStatus == CellInfo.CONNECTION_PRIMARY_SERVING
-                    
-                    _currentBand.value = BandInfo.NR(band, isSA)
-                    return
+            
+            if (!allCellInfo.isNullOrEmpty()) {
+                for (info in allCellInfo) {
+                    if (info is CellInfoNr && info.isRegistered) {
+                        // 5G NR tespiti (Standalone)
+                        val nr = info.cellIdentity as CellIdentityNr
+                        val band = getBandFromArfcn(nr.nrarfcn)
+                        val isSA = info.cellConnectionStatus == CellInfo.CONNECTION_PRIMARY_SERVING
+                        _currentBand.value = BandInfo.NR(band, isSA)
+                        return
+                    }
                 }
             }
 
-            // Eğer 5G bulunamadıysa LTE kontrolü (NSA durumu için)
-            // Not: NSA durumunda ServiceState üzerinden NR durumu kontrol edilmelidir.
+            // Eğer CellInfoNr bulunamadıysa NSA (Non-Standalone) kontrolü yap
             checkNsaStatus()
 
         } catch (e: SecurityException) {
@@ -55,8 +52,25 @@ class NetworkMonitor(private val context: Context) {
     }
 
     private fun checkNsaStatus() {
-        // NSA durumunda cihaz LTE'ye bağlıdır ancak NR (5G) sinyali de alır.
-        // Bu detaylı tespit için ServiceState.getNrState() kullanılır.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            val serviceState = telephonyManager.serviceState
+            if (serviceState != null) {
+                // NR State kontrolü (NSA için)
+                // NR_STATE_CONNECTED: Cihaz 5G'ye bağlı (NSA)
+                // NR_STATE_NOT_RESTRICTED: 5G mevcut ama bağlı değil
+                val nrState = serviceState.nrState
+                if (nrState == NetworkRegistrationInfo.NR_STATE_CONNECTED || 
+                    nrState == NetworkRegistrationInfo.NR_STATE_NOT_RESTRICTED) {
+                    // NSA durumunda bandı tam olarak CellInfo olmadan bilemeyebiliriz 
+                    // ama n78 varsayımı veya genel 5G gösterimi yapabiliriz.
+                    _currentBand.value = BandInfo.NR(78, false) // NSA varsayımı
+                    return
+                }
+            }
+        }
+        
+        // Hiçbiri değilse LTE veya Bilinmiyor
+        _currentBand.value = BandInfo.LTE(0)
     }
 
     /**

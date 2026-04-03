@@ -8,14 +8,20 @@ import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Marker
+import org.osmdroid.views.overlay.mylocation.GpsMyLocationProvider
+import org.osmdroid.views.overlay.mylocation.MyLocationNewOverlay
 import org.osmdroid.config.Configuration
 import androidx.preference.PreferenceManager
 
 @Composable
 fun MapScreen(
     currentLocation: GeoPoint,
-    markers: List<MapMarkerData>
+    markers: List<MapMarkerData>,
+    centerTrigger: Int // Bu değer değiştikçe harita merkeze odaklanır
 ) {
+    val mapView = remember { mutableStateOf<MapView?>(null) }
+    val locationOverlayState = remember { mutableStateOf<MyLocationNewOverlay?>(null) }
+
     AndroidView(
         modifier = Modifier.fillMaxSize(),
         factory = { context ->
@@ -26,25 +32,38 @@ fun MapScreen(
                 setMultiTouchControls(true)
                 controller.setZoom(15.0)
                 controller.setCenter(currentLocation)
+                
+                // Mevcut konum katmanı
+                val locationOverlay = MyLocationNewOverlay(GpsMyLocationProvider(context), this)
+                locationOverlay.enableMyLocation()
+                locationOverlay.enableFollowLocation()
+                overlays.add(locationOverlay)
+                locationOverlayState.value = locationOverlay
+                mapView.value = this
             }
         },
-        update = { mapView ->
-            // Sadece konum değiştiğinde merkeze al (Kullanıcı haritayı kaydırıyorsa bozmamak için)
-            // mapView.controller.animateTo(currentLocation) 
-            
-            // Mevcut overlay sayısını kontrol et, eğer liste boyutu farklıysa güncelle
-            if (mapView.overlays.size != markers.size) {
-                mapView.overlays.clear()
+        update = { view ->
+            // Marker'ları güncelle
+            val currentMarkers = view.overlays.filterIsInstance<Marker>()
+            if (currentMarkers.size != markers.size) {
+                view.overlays.removeAll(currentMarkers)
                 markers.forEach { data ->
-                    val marker = Marker(mapView)
+                    val marker = Marker(view)
                     marker.position = data.position
                     marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_BOTTOM)
-                    marker.title = data.bandName
-                    // Marker rengini burada data.color'a göre özelleştirebilirsin (İkon değiştirerek)
-                    mapView.overlays.add(marker)
+                    marker.title = "${data.bandName} Band"
+                    view.overlays.add(marker)
                 }
-                mapView.invalidate()
+                view.invalidate()
             }
         }
     )
+
+    // Merkeze odaklanma tetiklendiğinde
+    LaunchedEffect(centerTrigger) {
+        if (centerTrigger > 0) {
+            locationOverlayState.value?.enableFollowLocation()
+            mapView.value?.controller?.animateTo(currentLocation)
+        }
+    }
 }

@@ -2,14 +2,18 @@ package com.example.bandmapper
 
 import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Looper
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MyLocation
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,26 +23,33 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import com.example.bandmapper.ui.theme.BandMapperTheme
+import com.google.android.gms.location.*
 import org.osmdroid.util.GeoPoint
 import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
 
     private lateinit var networkMonitor: NetworkMonitor
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
     private val markers = mutableStateListOf<MapMarkerData>()
+    private var currentLocationState = mutableStateOf(GeoPoint(41.0082, 28.9784))
 
     // İzin isteme yapısı
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        // İzinler verildi mi kontrolü yapılabilir
+        if (permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true) {
+            startLocationUpdates()
+        }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
         networkMonitor = NetworkMonitor(this)
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         // İzinleri iste
         requestPermissionLauncher.launch(arrayOf(
@@ -56,6 +67,10 @@ class MainActivity : ComponentActivity() {
             startService(serviceIntent)
         }
 
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+            startLocationUpdates()
+        }
+
         setContent {
             BandMapperTheme {
                 MainLayout()
@@ -63,24 +78,40 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    private fun startLocationUpdates() {
+        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000)
+            .setWaitForAccurateLocation(false)
+            .setMinUpdateIntervalMillis(3000)
+            .setMaxUpdateDelayMillis(10000)
+            .build()
+
+        val locationCallback = object : LocationCallback() {
+            override fun onLocationResult(locationResult: LocationResult) {
+                for (location in locationResult.locations) {
+                    currentLocationState.value = GeoPoint(location.latitude, location.longitude)
+                }
+            }
+        }
+
+        try {
+            fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
+        } catch (e: SecurityException) {
+            // İzin yok
+        }
+    }
+
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun MainLayout() {
         val bandInfo by networkMonitor.currentBand.collectAsState()
-        var currentLocation by remember { mutableStateOf(GeoPoint(41.0082, 28.9784)) }
+        val currentLocation by currentLocationState
+        var centerTrigger by remember { mutableStateOf(0) }
 
-        // Simülasyon: Konumu hafifçe kaydırarak marker'ların üst üste binmesini engelle
+        // Periyodik veri kaydı
         LaunchedEffect(Unit) {
-            var lat = 41.0082
-            var lon = 28.9784
             while (true) {
                 delay(5000)
                 networkMonitor.updateNetworkInfo()
-                
-                // Rastgele küçük hareket simülasyonu
-                lat += (Math.random() - 0.5) * 0.001
-                lon += (Math.random() - 0.5) * 0.001
-                currentLocation = GeoPoint(lat, lon)
                 
                 val color = when (bandInfo) {
                     is NetworkMonitor.BandInfo.NR -> {
@@ -90,13 +121,26 @@ class MainActivity : ComponentActivity() {
                     else -> Color.Gray
                 }
                 
-                markers.add(MapMarkerData(currentLocation, color, "Band"))
+                val bandName = when (bandInfo) {
+                    is NetworkMonitor.BandInfo.NR -> "n${(bandInfo as NetworkMonitor.BandInfo.NR).bandIndex}"
+                    is NetworkMonitor.BandInfo.LTE -> "LTE"
+                    else -> "Bilinmiyor"
+                }
+                
+                markers.add(MapMarkerData(currentLocation, color, bandName))
             }
         }
 
         Scaffold(
             topBar = {
                 TopAppBar(title = { Text("5G n78 Mapper") })
+            },
+            floatingActionButton = {
+                FloatingActionButton(onClick = {
+                    centerTrigger++
+                }) {
+                    Icon(Icons.Default.MyLocation, contentDescription = "Konumum")
+                }
             }
         ) { padding ->
             Column(modifier = Modifier.padding(padding)) {
@@ -105,7 +149,7 @@ class MainActivity : ComponentActivity() {
                 
                 // Harita Alanı
                 Box(modifier = Modifier.weight(1f)) {
-                    MapScreen(currentLocation, markers)
+                    MapScreen(currentLocation, markers, centerTrigger)
                 }
             }
         }
