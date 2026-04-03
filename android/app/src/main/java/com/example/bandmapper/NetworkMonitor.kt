@@ -4,11 +4,11 @@ import android.content.Context
 import android.telephony.*
 import android.os.Build
 import androidx.annotation.RequiresApi
-import cz.mroczis.netmonster.core.factory.NetMonsterFactory
-import cz.mroczis.netmonster.core.model.cell.ICell
-import cz.mroczis.netmonster.core.model.connection.PrimaryConnection
-import cz.mroczis.netmonster.core.model.nr.CellNr
-import cz.mroczis.netmonster.core.model.lte.CellLte
+import app.netmonster.core.factory.NetMonsterFactory
+import app.netmonster.core.model.cell.ICell
+import app.netmonster.core.model.connection.PrimaryConnection
+import app.netmonster.core.model.cell.CellNr
+import app.netmonster.core.model.cell.CellLte
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -30,19 +30,15 @@ class NetworkMonitor(private val context: Context) {
         data class LTE(val pci: Int) : BandInfo()
     }
 
-    private var listener: cz.mroczis.netmonster.core.INetMonster.ISubscription? = null
+    // private var listener: app.netmonster.core.INetMonster.ISubscription? = null
 
     fun startMonitoring() {
-        listener = netMonster.subscribe(object : cz.mroczis.netmonster.core.INetMonster.IOnCellsUpdatedListener {
-            override fun onCellsUpdated(cells: List<ICell>) {
-                processCells(cells)
-            }
-        })
+        // subscribe metodu sorunlu olabilir, getCells() periyodik olarak çağrılacak
     }
 
     fun stopMonitoring() {
-        listener?.destroy()
-        listener = null
+        // listener?.destroy()
+        // listener = null
     }
 
     private fun processCells(cells: List<ICell>) {

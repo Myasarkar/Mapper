@@ -147,6 +147,14 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        // Periyodik şebeke güncellemesi (subscribe çalışmazsa yedek olarak)
+        LaunchedEffect(Unit) {
+            while(true) {
+                networkMonitor.updateNetworkInfo()
+                delay(2000)
+            }
+        }
+
         Scaffold(
             topBar = {
                 TopAppBar(title = { Text("5G n78 Mapper") })

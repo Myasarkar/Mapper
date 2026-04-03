@@ -66,7 +66,7 @@ fun MapScreen(
                     paint.isAntiAlias = true
                     canvas.drawCircle(size / 2f, size / 2f, size / 2f, paint)
                     
-                    marker.icon = android.graphics.drawable.BitmapDrawable(context.resources, bitmap)
+                    marker.icon = android.graphics.drawable.BitmapDrawable(view.context.resources, bitmap)
                     marker.title = "${data.bandName} Band"
                     view.overlays.add(marker)
                 }
