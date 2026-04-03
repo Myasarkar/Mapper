@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.example.bandmapper.ui.theme.BandMapperTheme
 import com.google.android.gms.location.*
+import org.osmdroid.config.Configuration
 import org.osmdroid.util.GeoPoint
 import kotlinx.coroutines.delay
 import androidx.compose.runtime.collectAsState
@@ -53,6 +54,14 @@ class MainActivity : ComponentActivity() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private val markers = mutableStateListOf<MapMarkerData>()
     private var currentLocationState = mutableStateOf(GeoPoint(41.0082, 28.9784))
+
+    private val locationCallback = object : LocationCallback() {
+        override fun onLocationResult(locationResult: LocationResult) {
+            for (location in locationResult.locations) {
+                currentLocationState.value = GeoPoint(location.latitude, location.longitude)
+            }
+        }
+    }
 
     // İzin isteme yapısı
     private val requestPermissionLauncher = registerForActivityResult(
@@ -66,6 +75,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        // Osmdroid User Agent Ayarı
+        Configuration.getInstance().userAgentValue = packageName
+
         networkMonitor = NetworkMonitor(this)
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
@@ -103,19 +115,19 @@ class MainActivity : ComponentActivity() {
             .setMaxUpdateDelayMillis(10000)
             .build()
 
-        val locationCallback = object : LocationCallback() {
-            override fun onLocationResult(locationResult: LocationResult) {
-                for (location in locationResult.locations) {
-                    currentLocationState.value = GeoPoint(location.latitude, location.longitude)
-                }
-            }
-        }
-
         try {
             fusedLocationClient.requestLocationUpdates(locationRequest, locationCallback, Looper.getMainLooper())
         } catch (e: SecurityException) {
             // İzin yok
         }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        // Konum güncellemelerini durdur
+        fusedLocationClient.removeLocationUpdates(locationCallback)
+        // Servisi durdur
+        stopService(Intent(this, ForegroundService::class.java))
     }
 
     override fun onStart() {
