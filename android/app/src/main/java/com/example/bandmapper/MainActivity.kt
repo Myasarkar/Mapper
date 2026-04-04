@@ -50,11 +50,20 @@ import org.osmdroid.util.GeoPoint
 import kotlinx.coroutines.delay
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import com.example.bandmapper.data.BandData
+import com.example.bandmapper.data.BandDatabase
+import kotlinx.coroutines.launch
+import android.view.WindowManager
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import android.app.Activity
 
 class MainActivity : ComponentActivity() {
 
     private lateinit var networkMonitor: NetworkMonitor
     private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private lateinit var database: BandDatabase
     private val markers = mutableStateListOf<MapMarkerData>()
     private var currentLocationState = mutableStateOf(GeoPoint(41.0082, 28.9784))
     private var isMappingActive = mutableStateOf(false)
@@ -84,6 +93,7 @@ class MainActivity : ComponentActivity() {
         Configuration.getInstance().userAgentValue = packageName
         networkMonitor = NetworkMonitor(this)
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        database = BandDatabase.getDatabase(this)
 
         checkAndRequestPermissions()
 
@@ -164,6 +174,41 @@ class MainActivity : ComponentActivity() {
         val currentLocation by currentLocationState
         val isMapping by isMappingActive
         var centerTrigger by remember { mutableStateOf(0) }
+        val scope = rememberCoroutineScope()
+
+        // Ekranı Açık Tutma (Mapping Aktifken)
+        val context = LocalContext.current
+        DisposableEffect(isMapping) {
+            val activity = context as? Activity
+            if (isMapping) {
+                activity?.window?.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            } else {
+                activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            }
+            onDispose {
+                activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            }
+        }
+
+        // Geçmiş Verileri Yükle
+        LaunchedEffect(Unit) {
+            database.bandDataDao().getAllBandData().collect { history ->
+                if (markers.isEmpty()) { // Sadece başlangıçta yükle
+                    history.forEach { data ->
+                        val color = when (data.technology) {
+                            "5G" -> {
+                                if (data.bandName.contains("78")) Color.Green
+                                else if (data.bandName.contains("28")) Color(0xFFFFA500)
+                                else Color.Blue
+                            }
+                            "LTE" -> Color.Gray
+                            else -> Color.Red
+                        }
+                        markers.add(MapMarkerData(id = data.id, position = GeoPoint(data.latitude, data.longitude), color = color, bandName = data.bandName))
+                    }
+                }
+            }
+        }
 
         // Haritalama Mantığı (Sadece Aktifken)
         LaunchedEffect(currentLocation, bandInfo, isMapping) {
@@ -190,8 +235,48 @@ class MainActivity : ComponentActivity() {
                     else -> "Sinyal Yok"
                 }
                 
-                if (markers.isEmpty() || markers.last().position != currentLocation) {
-                    markers.add(MapMarkerData(currentLocation, color, bandName))
+                val tech = when (bandInfo) {
+                    is NetworkMonitor.BandInfo.NR -> "5G"
+                    is NetworkMonitor.BandInfo.LTE -> "LTE"
+                    else -> "NONE"
+                }
+                
+                // 20 metre yakınında başka bir nokta var mı kontrol et
+                val existingMarkerIndex = markers.indexOfFirst { 
+                    it.position.distanceToAsDouble(currentLocation) < 20.0 
+                }
+
+                if (existingMarkerIndex != -1) {
+                    // Mevcut noktayı güncelle
+                    val existingMarker = markers[existingMarkerIndex]
+                    val updatedMarker = existingMarker.copy(color = color, bandName = bandName)
+                    markers[existingMarkerIndex] = updatedMarker
+                    
+                    // Veritabanında güncelle
+                    scope.launch {
+                        database.bandDataDao().insert(
+                            BandData(
+                                id = existingMarker.id ?: 0,
+                                latitude = existingMarker.position.latitude,
+                                longitude = existingMarker.position.longitude,
+                                bandName = bandName,
+                                technology = tech
+                            )
+                        )
+                    }
+                } else {
+                    // Yeni nokta ekle
+                    scope.launch {
+                        val newId = database.bandDataDao().insert(
+                            BandData(
+                                latitude = currentLocation.latitude,
+                                longitude = currentLocation.longitude,
+                                bandName = bandName,
+                                technology = tech
+                            )
+                        ).toInt()
+                        markers.add(MapMarkerData(id = newId, position = currentLocation, color = color, bandName = bandName))
+                    }
                 }
             }
         }
