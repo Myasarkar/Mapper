@@ -30,6 +30,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -208,7 +210,7 @@ class MainActivity : ComponentActivity() {
                     actions = {
                         IconButton(onClick = { isMappingActive.value = !isMappingActive.value }) {
                             Icon(
-                                if (isMapping) Icons.Default.Close else Icons.Default.PlayArrow,
+                                if (isMapping) Icons.Filled.Stop else Icons.Filled.PlayArrow,
                                 contentDescription = if (isMapping) "Durdur" else "Başlat",
                                 tint = if (isMapping) Color.Red else Color.Green
                             )
@@ -220,7 +222,7 @@ class MainActivity : ComponentActivity() {
                 FloatingActionButton(onClick = {
                     centerTrigger++
                 }) {
-                    Icon(Icons.Default.LocationOn, contentDescription = "Konumum")
+                    Icon(Icons.Filled.LocationOn, contentDescription = "Konumum")
                 }
             }
         ) { padding ->
