@@ -204,8 +204,10 @@ class MainActivity : ComponentActivity() {
         }
 
         Scaffold(
+            modifier = Modifier.fillMaxSize(),
             topBar = {
                 TopAppBar(
+                    modifier = Modifier.statusBarsPadding(),
                     title = { Text("5G Band Mapper", fontWeight = FontWeight.Bold) },
                     actions = {
                         IconButton(onClick = { isMappingActive.value = !isMappingActive.value }) {
@@ -215,7 +217,12 @@ class MainActivity : ComponentActivity() {
                                 tint = if (isMapping) Color.Red else Color.Green
                             )
                         }
-                    }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                        actionIconContentColor = MaterialTheme.colorScheme.onPrimary
+                    )
                 )
             },
             floatingActionButton = {
@@ -231,17 +238,23 @@ class MainActivity : ComponentActivity() {
                 MapScreen(currentLocation, markers, centerTrigger)
                 
                 // Üst Gösterge Paneli (Haritanın Üstünde)
-                Column(modifier = Modifier.align(Alignment.TopCenter)) {
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .zIndex(1f) // Haritanın üstünde kalmasını garanti et
+                ) {
                     BandIndicator(bandInfo)
                     if (!isMapping) {
                         Card(
                             modifier = Modifier.padding(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color.Yellow.copy(alpha = 0.8f))
+                            colors = CardDefaults.cardColors(containerColor = Color.Yellow.copy(alpha = 0.9f)),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
                         ) {
                             Text("Haritalama Durduruldu. Başlatmak için sağ üstteki butona basın.", 
-                                 modifier = Modifier.padding(8.dp), 
-                                 fontSize = 12.sp, 
-                                 fontWeight = FontWeight.Bold)
+                                 modifier = Modifier.padding(12.dp), 
+                                 fontSize = 14.sp, 
+                                 fontWeight = FontWeight.Bold,
+                                 color = Color.Black)
                         }
                     }
                 }
@@ -294,15 +307,17 @@ class MainActivity : ComponentActivity() {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = text,
-                        fontSize = 22.sp,
+                        fontSize = 20.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        lineHeight = 28.sp
+                        lineHeight = 24.sp,
+                        maxLines = 1
                     )
                     Text(
                         text = subText,
-                        fontSize = 14.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1
                     )
                 }
             }
