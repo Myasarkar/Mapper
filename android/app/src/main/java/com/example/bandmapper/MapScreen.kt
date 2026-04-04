@@ -66,34 +66,36 @@ fun MapScreen(
         update = { view ->
             // Marker'ları güncelle
             val currentMarkers = view.overlays.filterIsInstance<Marker>()
-            if (currentMarkers.size != markers.size) {
-                view.overlays.removeAll(currentMarkers)
-                markers.forEach { data ->
-                    val marker = Marker(view)
-                    marker.position = data.position
-                    marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
-                    
-                    // nPerf tarzı nokta ikonu oluştur (Boyut büyütüldü)
-                    val size = 60
-                    val bitmap = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
-                    val canvas = android.graphics.Canvas(bitmap)
-                    val paint = android.graphics.Paint()
-                    paint.color = data.color.toArgb()
-                    paint.isAntiAlias = true
-                    // Dış halka (beyaz)
-                    paint.style = android.graphics.Paint.Style.FILL
-                    paint.color = android.graphics.Color.WHITE
-                    canvas.drawCircle(size / 2f, size / 2f, size / 2f, paint)
-                    // İç nokta (renkli)
-                    paint.color = data.color.toArgb()
-                    canvas.drawCircle(size / 2f, size / 2f, size / 2f - 6, paint)
-                    
-                    marker.icon = android.graphics.drawable.BitmapDrawable(view.context.resources, bitmap)
-                    marker.title = "${data.bandName} Band"
-                    view.overlays.add(marker)
-                }
-                view.invalidate()
+            
+            // Basit bir kontrol yerine her zaman veya içerik değiştiğinde güncelleme yapalım
+            // Performans için markers listesinin hash'ini veya içeriğini kontrol edebiliriz
+            // Şimdilik her değişiklikte temizleyip yeniden eklemek en güvenlisi
+            view.overlays.removeAll(currentMarkers)
+            markers.forEach { data ->
+                val marker = Marker(view)
+                marker.position = data.position
+                marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
+                
+                // nPerf tarzı nokta ikonu oluştur (Boyut büyütüldü)
+                val size = 60
+                val bitmap = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+                val canvas = android.graphics.Canvas(bitmap)
+                val paint = android.graphics.Paint()
+                paint.color = data.color.toArgb()
+                paint.isAntiAlias = true
+                // Dış halka (beyaz)
+                paint.style = android.graphics.Paint.Style.FILL
+                paint.color = android.graphics.Color.WHITE
+                canvas.drawCircle(size / 2f, size / 2f, size / 2f, paint)
+                // İç nokta (renkli)
+                paint.color = data.color.toArgb()
+                canvas.drawCircle(size / 2f, size / 2f, size / 2f - 6, paint)
+                
+                marker.icon = android.graphics.drawable.BitmapDrawable(view.context.resources, bitmap)
+                marker.title = "${data.bandName} Band"
+                view.overlays.add(marker)
             }
+            view.invalidate()
         }
     )
 
