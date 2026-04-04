@@ -23,9 +23,6 @@ jobs:
       with:
         gradle-version: 8.7
 
-    - name: Grant execute permission for gradlew
-      run: chmod +x android/gradlew
-
     - name: Decode Keystore
       if: github.event_name != 'pull_request'
       run: |
@@ -40,13 +37,13 @@ jobs:
         KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
       run: |
         cd android
-        ./gradlew assembleRelease
+        gradle assembleRelease
 
     - name: Build Debug APK
       if: github.event_name == 'pull_request'
       run: |
         cd android
-        ./gradlew assembleDebug
+        gradle assembleDebug
 
     - name: Upload Release APK
       if: github.event_name != 'pull_request'
