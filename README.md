@@ -1,28 +1,42 @@
-# 5G n78 Band Mapper - Android Projesi
+# 🛰️ 5G Band Mapper
 
-Bu proje, Android cihazlarda **5G n78 (3500MHz)** bandını tespit eden ve bu verileri **OpenStreetMap (Osmdroid)** üzerinde görselleştiren profesyonel bir mobil uygulama altyapısıdır.
+[![Android Build](https://github.com/mustafayasarkar/BandMapper/actions/workflows/main.yml/badge.svg)](https://github.com/mustafayasarkar/BandMapper/actions/workflows/main.yml)
 
-## 🚀 Kurulum ve Çalıştırma
+**5G Band Mapper**, Android cihazlarda şebeke bilgilerini (özellikle 5G n78 bandını) gerçek zamanlı olarak takip eden, harita üzerinde görselleştiren ve verileri yerel bir veritabanında saklayan profesyonel bir araçtır.
 
-### 1. Harita Yapılandırması
-Bu uygulama **OpenStreetMap** kullandığı için herhangi bir **Google Maps API anahtarına ihtiyaç duymaz.** Kurulum gerektirmeden doğrudan çalıştırılabilir.
+## ✨ Özellikler
 
-### 2. APK Alma
-Projeyi GitHub'a yükleyin. GitHub Actions otomatik olarak APK üretecektir:
-1. Kodu GitHub reponuza push edin
-2. "Actions" sekmesine gidin
-3. Build tamamlandığında "app-debug" artifact'ini indirin
+- **🎯 Gerçek Zamanlı 5G Tespiti:** n78 (3500MHz) ve diğer 5G bantlarını otomatik olarak tespit eder.
+- **🗺️ İnteraktif Harita:** OpenStreetMap (Osmdroid) altyapısı ile internet bağlantısı olan her yerde çalışır (Google Maps API anahtarı gerektirmez).
+- **📊 Renkli Göstergeler:** Şebeke türüne göre (5G SA, 5G NSA, LTE) harita üzerinde farklı renklerde noktalar bırakır.
+- **💾 Yerel Veritabanı:** Room DB kullanarak tüm ölçümlerinizi telefonunuzda saklar ve uygulama açıldığında geçmişi yükler.
+- **🚫 Ekran Kilidi Engelleme:** Haritalama aktifken ekranın kapanmasını önler.
+- **📏 Akıllı Nokta Yönetimi:** Aynı konumda (20m çapında) mükerrer kayıt oluşturmaz, mevcut veriyi günceller.
 
-## 🛠️ Proje Özellikleri
-- **OpenStreetMap (Osmdroid):** API anahtarı gerektirmeyen, tamamen açık kaynaklı harita altyapısı.
-- **Jetpack Compose & Material 3:** Modern ve hızlı kullanıcı arayüzü.
-- **5G n78 Tespiti:** n78 bandına bağlıyken ekranda büyük yeşil gösterge çıkar.
-- **Harita Takibi:** Her 5 saniyede bir o anki şebeke türüne göre haritaya nokta ekler.
-- **Arka Plan Servisi:** Uygulama kapalıyken dahi veri toplamaya devam eder (Foreground Service).
+## 🛠️ Kullanılan Teknolojiler
 
-## 📦 APK Üretimi
-Bu proje GitHub Actions ile entegre edilmiştir. Projeyi GitHub deponuza yüklediğinizde otomatik olarak bir hata ayıklama (debug) APK'sı üretilir ve "Actions" sekmesinde yayınlanır. Artık SHA-1 koduyla uğraşmanıza gerek yoktur.
+- **Dil:** Kotlin
+- **UI:** Jetpack Compose & Material 3
+- **Harita:** Osmdroid (OpenStreetMap)
+- **Şebeke İzleme:** NetMonster Core & Android Telephony API
+- **Veritabanı:** Room Persistence Library
+- **CI/CD:** GitHub Actions (Otomatik APK Üretimi)
+
+## 🚀 Kurulum ve Derleme
+
+### 1. Kendi APK'nızı Üretin (GitHub Actions)
+Bu proje GitHub Actions ile entegre edilmiştir. Kendi deponuza "Fork" yaptıktan sonra:
+1. GitHub Secrets kısmına Keystore bilgilerinizi ekleyin (`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`).
+2. Herhangi bir değişiklik yapıp "Push" ettiğinizde, **Actions** sekmesinde imzalı APK'nız otomatik olarak oluşacaktır.
+
+### 2. Manuel Derleme
+Projeyi Android Studio ile açın ve Gradle senkronizasyonunun tamamlanmasını bekleyin. Ardından `Run` butonuna basarak cihazınızda çalıştırabilirsiniz.
+
+## 📸 Ekran Görüntüleri
+*(Buraya uygulamanın ekran görüntülerini ekleyebilirsiniz)*
+
+## 📄 Lisans
+Bu proje **Apache License 2.0** ile lisanslanmıştır. Detaylar için [LICENSE](LICENSE) dosyasına bakabilirsiniz.
 
 ---
-**Geliştirici:** Mustafa Yaşar Kar
-**Teknoloji:** Kotlin, Jetpack Compose, Android Telephony API
+**Geliştirici:** [Mustafa Yaşar Kar](https://github.com/mustafayasarkar)
