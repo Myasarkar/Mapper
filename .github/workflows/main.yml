@@ -1,4 +1,4 @@
-name: Android APK Build
+name: Android Build
 
 on:
   push:
@@ -23,10 +23,37 @@ jobs:
       with:
         gradle-version: 8.7
 
-    - name: Build with Gradle
-      run: cd android && gradle assembleDebug
+    - name: Decode Keystore
+      if: github.event_name != 'pull_request'
+      run: |
+        echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/release.keystore
 
-    - name: Upload APK
+    - name: Build Release APK
+      if: github.event_name != 'pull_request'
+      env:
+        KEYSTORE_PATH: release.keystore
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      run: |
+        cd android
+        ./gradlew assembleRelease
+
+    - name: Build Debug APK
+      if: github.event_name == 'pull_request'
+      run: |
+        cd android
+        ./gradlew assembleDebug
+
+    - name: Upload Release APK
+      if: github.event_name != 'pull_request'
+      uses: actions/upload-artifact@v4
+      with:
+        name: app-release
+        path: android/app/build/outputs/apk/release/app-release.apk
+
+    - name: Upload Debug APK
+      if: github.event_name == 'pull_request'
       uses: actions/upload-artifact@v4
       with:
         name: app-debug
