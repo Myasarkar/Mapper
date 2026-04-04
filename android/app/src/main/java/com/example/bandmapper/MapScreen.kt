@@ -73,14 +73,20 @@ fun MapScreen(
                     marker.position = data.position
                     marker.setAnchor(Marker.ANCHOR_CENTER, Marker.ANCHOR_CENTER)
                     
-                    // nPerf tarzı küçük nokta ikonu oluştur
-                    val size = 20
+                    // nPerf tarzı nokta ikonu oluştur (Boyut büyütüldü)
+                    val size = 40
                     val bitmap = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
                     val canvas = android.graphics.Canvas(bitmap)
                     val paint = android.graphics.Paint()
                     paint.color = data.color.toArgb()
                     paint.isAntiAlias = true
+                    // Dış halka (beyaz)
+                    paint.style = android.graphics.Paint.Style.FILL
+                    paint.color = android.graphics.Color.WHITE
                     canvas.drawCircle(size / 2f, size / 2f, size / 2f, paint)
+                    // İç nokta (renkli)
+                    paint.color = data.color.toArgb()
+                    canvas.drawCircle(size / 2f, size / 2f, size / 2f - 4, paint)
                     
                     marker.icon = android.graphics.drawable.BitmapDrawable(view.context.resources, bitmap)
                     marker.title = "${data.bandName} Band"

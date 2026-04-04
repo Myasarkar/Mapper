@@ -54,6 +54,8 @@ class MainActivity : ComponentActivity() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private val markers = mutableStateListOf<MapMarkerData>()
     private var currentLocationState = mutableStateOf(GeoPoint(41.0082, 28.9784))
+    private var isMappingActive = mutableStateOf(false)
+    private var hasPermissions = mutableStateOf(false)
 
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(locationResult: LocationResult) {
@@ -63,11 +65,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // İzin isteme yapısı
     private val requestPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
-        if (permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true) {
+        val allGranted = permissions.entries.all { it.value }
+        hasPermissions.value = allGranted
+        if (allGranted) {
             startLocationUpdates()
         }
     }
@@ -75,44 +78,46 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Osmdroid User Agent Ayarı
         Configuration.getInstance().userAgentValue = packageName
-
         networkMonitor = NetworkMonitor(this)
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
-        // İzinleri iste
-        requestPermissionLauncher.launch(arrayOf(
-            Manifest.permission.ACCESS_FINE_LOCATION,
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.READ_PHONE_STATE,
-            Manifest.permission.POST_NOTIFICATIONS
-        ))
-
-        // Servisi başlat
-        val serviceIntent = Intent(this, ForegroundService::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(serviceIntent)
-        } else {
-            startService(serviceIntent)
-        }
-
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            startLocationUpdates()
-        }
+        checkAndRequestPermissions()
 
         setContent {
             BandMapperTheme {
-                MainLayout()
+                if (hasPermissions.value) {
+                    MainLayout()
+                } else {
+                    PermissionRequiredScreen { checkAndRequestPermissions() }
+                }
             }
         }
     }
 
+    private fun checkAndRequestPermissions() {
+        val permissions = arrayOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION,
+            Manifest.permission.READ_PHONE_STATE
+        )
+        
+        val allGranted = permissions.all { 
+            ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED 
+        }
+        
+        if (allGranted) {
+            hasPermissions.value = true
+            startLocationUpdates()
+        } else {
+            requestPermissionLauncher.launch(permissions)
+        }
+    }
+
     private fun startLocationUpdates() {
-        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000)
+        val locationRequest = LocationRequest.Builder(Priority.PRIORITY_HIGH_ACCURACY, 3000)
             .setWaitForAccurateLocation(false)
-            .setMinUpdateIntervalMillis(3000)
-            .setMaxUpdateDelayMillis(10000)
+            .setMinUpdateIntervalMillis(2000)
             .build()
 
         try {
@@ -124,10 +129,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        // Konum güncellemelerini durdur
         fusedLocationClient.removeLocationUpdates(locationCallback)
-        // Servisi durdur
-        stopService(Intent(this, ForegroundService::class.java))
     }
 
     override fun onStart() {
@@ -140,45 +142,60 @@ class MainActivity : ComponentActivity() {
         networkMonitor.stopMonitoring()
     }
 
+    @Composable
+    fun PermissionRequiredScreen(onRetry: () -> Unit) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("Uygulamanın çalışması için izinler gereklidir.", modifier = Modifier.padding(16.dp))
+                Button(onClick = onRetry) {
+                    Text("İzinleri Tekrar İste")
+                }
+            }
+        }
+    }
+
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
     fun MainLayout() {
         val bandInfo by networkMonitor.currentBand.collectAsState()
         val currentLocation by currentLocationState
+        val isMapping by isMappingActive
         var centerTrigger by remember { mutableStateOf(0) }
 
-        // nPerf Tarzı Haritalama Mantığı
-        LaunchedEffect(currentLocation, bandInfo) {
-            val color = when (bandInfo) {
-                is NetworkMonitor.BandInfo.NR -> {
-                    val nr = bandInfo as NetworkMonitor.BandInfo.NR
-                    when (nr.bandIndex) {
-                        78 -> Color.Green
-                        28 -> Color(0xFFFFA500) // Orange
-                        else -> Color.Blue
+        // Haritalama Mantığı (Sadece Aktifken)
+        LaunchedEffect(currentLocation, bandInfo, isMapping) {
+            if (isMapping) {
+                val color = when (bandInfo) {
+                    is NetworkMonitor.BandInfo.NR -> {
+                        val nr = bandInfo as NetworkMonitor.BandInfo.NR
+                        when (nr.bandIndex) {
+                            78 -> Color.Green
+                            28 -> Color(0xFFFFA500) // Orange
+                            else -> Color.Blue
+                        }
                     }
+                    is NetworkMonitor.BandInfo.LTE -> Color.Gray
+                    else -> Color.Red
                 }
-                is NetworkMonitor.BandInfo.LTE -> Color.Gray
-                else -> Color.Red
-            }
-            
-            val bandName = when (bandInfo) {
-                is NetworkMonitor.BandInfo.NR -> {
-                    val band = (bandInfo as NetworkMonitor.BandInfo.NR).bandIndex
-                    if (band > 0) "n$band" else "5G"
+                
+                val bandName = when (bandInfo) {
+                    is NetworkMonitor.BandInfo.NR -> {
+                        val band = (bandInfo as NetworkMonitor.BandInfo.NR).bandIndex
+                        if (band > 0) "n$band" else "5G"
+                    }
+                    is NetworkMonitor.BandInfo.LTE -> "LTE"
+                    else -> "Sinyal Yok"
                 }
-                is NetworkMonitor.BandInfo.LTE -> "LTE"
-                else -> "Sinyal Yok"
-            }
-            
-            if (markers.isEmpty() || markers.last().position != currentLocation) {
-                markers.add(MapMarkerData(currentLocation, color, bandName))
+                
+                if (markers.isEmpty() || markers.last().position != currentLocation) {
+                    markers.add(MapMarkerData(currentLocation, color, bandName))
+                }
             }
         }
 
-        // Periyodik şebeke güncellemesi
-        LaunchedEffect(Unit) {
-            while(true) {
+        // Şebeke güncellemesi
+        LaunchedEffect(isMapping) {
+            while(isMapping) {
                 networkMonitor.updateNetworkInfo()
                 delay(2000)
             }
@@ -188,10 +205,15 @@ class MainActivity : ComponentActivity() {
             topBar = {
                 TopAppBar(
                     title = { Text("5G Band Mapper", fontWeight = FontWeight.Bold) },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface,
-                        titleContentColor = MaterialTheme.colorScheme.onSurface
-                    )
+                    actions = {
+                        IconButton(onClick = { isMappingActive.value = !isMappingActive.value }) {
+                            Icon(
+                                if (isMapping) Icons.Default.Close else Icons.Default.PlayArrow,
+                                contentDescription = if (isMapping) "Durdur" else "Başlat",
+                                tint = if (isMapping) Color.Red else Color.Green
+                            )
+                        }
+                    }
                 )
             },
             floatingActionButton = {
@@ -202,17 +224,24 @@ class MainActivity : ComponentActivity() {
                 }
             }
         ) { padding ->
-            Column(
-                modifier = Modifier
-                    .padding(padding)
-                    .fillMaxSize()
-            ) {
-                // Üst Gösterge Paneli
-                BandIndicator(bandInfo)
+            Box(modifier = Modifier.padding(padding).fillMaxSize()) {
+                // Harita (En Altta)
+                MapScreen(currentLocation, markers, centerTrigger)
                 
-                // Harita Alanı
-                Box(modifier = Modifier.weight(1f)) {
-                    MapScreen(currentLocation, markers, centerTrigger)
+                // Üst Gösterge Paneli (Haritanın Üstünde)
+                Column(modifier = Modifier.align(Alignment.TopCenter)) {
+                    BandIndicator(bandInfo)
+                    if (!isMapping) {
+                        Card(
+                            modifier = Modifier.padding(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color.Yellow.copy(alpha = 0.8f))
+                        ) {
+                            Text("Haritalama Durduruldu. Başlatmak için sağ üstteki butona basın.", 
+                                 modifier = Modifier.padding(8.dp), 
+                                 fontSize = 12.sp, 
+                                 fontWeight = FontWeight.Bold)
+                        }
+                    }
                 }
             }
         }
