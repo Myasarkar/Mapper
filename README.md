@@ -1,6 +1,6 @@
 # 🛰️ 5G Band Mapper
 
-[![Android Build](https://github.com/mustafayasarkar/BandMapper/actions/workflows/main.yml/badge.svg)](https://github.com/mustafayasarkar/BandMapper/actions/workflows/main.yml)
+[![Android Build](https://github.com/Myasarkar/Mapper/actions/workflows/main.yml/badge.svg)](https://github.com/Myasarkar/Mapper/actions/workflows/main.yml)
 
 **5G Band Mapper**, Android cihazlarda şebeke bilgilerini (özellikle 5G n78 bandını) gerçek zamanlı olarak takip eden, harita üzerinde görselleştiren ve verileri yerel bir veritabanında saklayan profesyonel bir araçtır.
 
@@ -22,15 +22,11 @@
 - **Veritabanı:** Room Persistence Library
 - **CI/CD:** GitHub Actions (Otomatik APK Üretimi)
 
-## 🚀 Kurulum ve Derleme
+## 📲 Uygulamayı İndir
 
-### 1. Kendi APK'nızı Üretin (GitHub Actions)
-Bu proje GitHub Actions ile entegre edilmiştir. Kendi deponuza "Fork" yaptıktan sonra:
-1. GitHub Secrets kısmına Keystore bilgilerinizi ekleyin (`KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`).
-2. Herhangi bir değişiklik yapıp "Push" ettiğinizde, **Actions** sekmesinde imzalı APK'nız otomatik olarak oluşacaktır.
+Uygulamanın en güncel sürümünü aşağıdaki bağlantıdan doğrudan indirebilirsiniz:
 
-### 2. Manuel Derleme
-Projeyi Android Studio ile açın ve Gradle senkronizasyonunun tamamlanmasını bekleyin. Ardından `Run` butonuna basarak cihazınızda çalıştırabilirsiniz.
+[**📥 5G Band Mapper APK İndir**](https://github.com/Myasarkar/Mapper/releases/download/5G-Band-Mapper/5G.Band.Mapper.apk)
 
 ## 📸 Ekran Görüntüleri
 *(Buraya uygulamanın ekran görüntülerini ekleyebilirsiniz)*
@@ -39,4 +35,4 @@ Projeyi Android Studio ile açın ve Gradle senkronizasyonunun tamamlanmasını 
 Bu proje **Apache License 2.0** ile lisanslanmıştır. Detaylar için [LICENSE](LICENSE) dosyasına bakabilirsiniz.
 
 ---
-**Geliştirici:** [Mustafa Yaşar Kar](https://github.com/mustafayasarkar)
+**Geliştirici:** [Mustafa Yaşar Kar](https://github.com/Myasarkar)
