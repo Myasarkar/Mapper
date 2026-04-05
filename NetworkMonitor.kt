@@ -58,6 +58,8 @@ class NetworkMonitor(private val context: Context) {
         // 1. Şebeke Tipini Al
         val networkType = netMonster.getNetworkType(subscriptionId)
         val networkTypeStr = networkType.toString()
+        
+        LogManager.log("Network Type: $networkTypeStr, Cells: ${cells.size}")
 
         // 2. 5G Hücresi Var mı? (Hem SA hem NSA için en güvenilir yol)
         // SecondaryConnection NSA modunda veri taşıyan 5G hücresini temsil eder
@@ -70,21 +72,23 @@ class NetworkMonitor(private val context: Context) {
             
             // SA/NSA tespiti için en garantili yöntem: 
             // Eğer şebeke tipi NrSa değilse veya içinde "Nsa" geçiyorsa kesinlikle NSA'dir.
-            val networkTypeStr = networkType.toString()
             val isSA = networkType is cz.mroczis.netmonster.core.model.network.NetworkType.NrSa && 
                       !networkTypeStr.contains("Nsa", ignoreCase = true)
             
+            LogManager.log("NR Cell Found: Band $band, isSA: $isSA")
             _currentBand.value = BandInfo.NR(band, isSA)
             return
         }
 
         // 3. Eğer hücre listesinde NR yoksa ama şebeke tipi 5G diyorsa (Bazen hücre detayları gelmez)
         if (networkTypeStr.contains("Nsa", ignoreCase = true)) {
+            LogManager.log("NSA Detected via NetworkType")
             _currentBand.value = BandInfo.NR(0, false) // Band 0 = Bilinmiyor/Tespit Edilemedi
             return
         }
         
         if (networkTypeStr.contains("Sa", ignoreCase = true)) {
+            LogManager.log("SA Detected via NetworkType")
             _currentBand.value = BandInfo.NR(0, true)
             return
         }
@@ -92,10 +96,12 @@ class NetworkMonitor(private val context: Context) {
         // 4. Standart LTE Kontrolü
         val lteCell = cells.filterIsInstance<CellLte>().firstOrNull { it.connectionStatus is PrimaryConnection }
         if (lteCell != null) {
+            LogManager.log("LTE Cell Found: PCI ${lteCell.pci}")
             _currentBand.value = BandInfo.LTE(lteCell.pci ?: 0)
             return
         }
 
+        LogManager.log("No recognized cells found")
         _currentBand.value = BandInfo.Unknown
     }
 
@@ -104,8 +110,9 @@ class NetworkMonitor(private val context: Context) {
             val cells = netMonster.getCells()
             processCells(cells)
         } catch (e: SecurityException) {
-            // İzin hatası
+            LogManager.log("SecurityException: ${e.message}")
         } catch (e: Exception) {
+            LogManager.log("Exception: ${e.message}")
             _currentBand.value = BandInfo.Unknown
         }
     }

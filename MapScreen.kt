@@ -63,28 +63,28 @@ fun MapScreen(
                 val personCanvas = Canvas(personBitmap)
                 val personPaint = Paint().apply { isAntiAlias = true }
                 
-                // Sabit dururken: Daire
-                personPaint.color = android.graphics.Color.parseColor("#FFD700") // Altın Sarısı
+                // Sabit dururken: Kırmızı Daire (Siyah Çerçeveli)
+                personPaint.color = android.graphics.Color.BLACK
                 personCanvas.drawCircle(personSize / 2f, personSize / 2f, personSize / 3f, personPaint)
-                personPaint.color = android.graphics.Color.parseColor("#00008B") // Koyu Mavi
+                personPaint.color = android.graphics.Color.RED
                 personCanvas.drawCircle(personSize / 2f, personSize / 2f, personSize / 4f, personPaint)
                 
-                // Hareket ederken: Ok (Direction Arrow)
+                // Hareket ederken: Kırmızı Ok (Direction Arrow)
                 val arrowBitmap = Bitmap.createBitmap(personSize, personSize, Bitmap.Config.ARGB_8888)
                 val arrowCanvas = Canvas(arrowBitmap)
                 val arrowPath = android.graphics.Path().apply {
-                    moveTo(personSize / 2f, 10f) // Tepe
-                    lineTo(personSize * 0.8f, personSize * 0.9f) // Sağ alt
+                    moveTo(personSize / 2f, 5f) // Tepe
+                    lineTo(personSize * 0.9f, personSize * 0.95f) // Sağ alt
                     lineTo(personSize / 2f, personSize * 0.7f) // Orta çukur
-                    lineTo(personSize * 0.2f, personSize * 0.9f) // Sol alt
+                    lineTo(personSize * 0.1f, personSize * 0.95f) // Sol alt
                     close()
                 }
                 val arrowPaint = Paint().apply { isAntiAlias = true }
-                arrowPaint.color = android.graphics.Color.parseColor("#FFD700") // Sarı Çerçeve
+                arrowPaint.color = android.graphics.Color.BLACK // Siyah Çerçeve
                 arrowPaint.style = Paint.Style.STROKE
-                arrowPaint.strokeWidth = 10f
+                arrowPaint.strokeWidth = 12f
                 arrowCanvas.drawPath(arrowPath, arrowPaint)
-                arrowPaint.color = android.graphics.Color.parseColor("#00008B") // Koyu Mavi İç
+                arrowPaint.color = android.graphics.Color.RED // Kırmızı İç
                 arrowPaint.style = Paint.Style.FILL
                 arrowCanvas.drawPath(arrowPath, arrowPaint)
                 
@@ -98,6 +98,7 @@ fun MapScreen(
                 overlays.add(locationOverlay)
                 locationOverlayState.value = locationOverlay
                 mapView.value = this
+                this.postInvalidate() // Haritayı yenilemeye zorla
             }
         },
         update = { view ->
