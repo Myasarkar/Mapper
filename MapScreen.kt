@@ -57,34 +57,34 @@ fun MapScreen(
                 // Mevcut konum katmanı
                 val locationOverlay = MyLocationNewOverlay(GpsMyLocationProvider(context), this)
                 
-                // Konum imlecini özelleştir (Beyaz yollarla karışmaması için Mavi/Lacivert yapalım)
-                val personSize = 100
+                // Konum imlecini özelleştir (Sarı çerçeveli Koyu Mavi)
+                val personSize = 120
                 val personBitmap = Bitmap.createBitmap(personSize, personSize, Bitmap.Config.ARGB_8888)
                 val personCanvas = Canvas(personBitmap)
                 val personPaint = Paint().apply { isAntiAlias = true }
                 
-                // Sabit dururken: Mavi Daire (Beyaz Çerçeveli)
-                personPaint.color = android.graphics.Color.WHITE
-                personCanvas.drawCircle(personSize / 2f, personSize / 2f, personSize / 2.5f, personPaint)
-                personPaint.color = android.graphics.Color.parseColor("#007AFF") // iOS Mavi
-                personCanvas.drawCircle(personSize / 2f, personSize / 2f, personSize / 3.5f, personPaint)
+                // Sabit dururken: Daire
+                personPaint.color = android.graphics.Color.parseColor("#FFD700") // Altın Sarısı
+                personCanvas.drawCircle(personSize / 2f, personSize / 2f, personSize / 3f, personPaint)
+                personPaint.color = android.graphics.Color.parseColor("#00008B") // Koyu Mavi
+                personCanvas.drawCircle(personSize / 2f, personSize / 2f, personSize / 4f, personPaint)
                 
-                // Hareket ederken: Mavi Ok (Direction Arrow)
+                // Hareket ederken: Ok (Direction Arrow)
                 val arrowBitmap = Bitmap.createBitmap(personSize, personSize, Bitmap.Config.ARGB_8888)
                 val arrowCanvas = Canvas(arrowBitmap)
                 val arrowPath = android.graphics.Path().apply {
-                    moveTo(personSize / 2f, 5f) // Tepe
-                    lineTo(personSize * 0.85f, personSize * 0.95f) // Sağ alt
-                    lineTo(personSize / 2f, personSize * 0.75f) // Orta çukur
-                    lineTo(personSize * 0.15f, personSize * 0.95f) // Sol alt
+                    moveTo(personSize / 2f, 10f) // Tepe
+                    lineTo(personSize * 0.8f, personSize * 0.9f) // Sağ alt
+                    lineTo(personSize / 2f, personSize * 0.7f) // Orta çukur
+                    lineTo(personSize * 0.2f, personSize * 0.9f) // Sol alt
                     close()
                 }
                 val arrowPaint = Paint().apply { isAntiAlias = true }
-                arrowPaint.color = android.graphics.Color.WHITE
+                arrowPaint.color = android.graphics.Color.parseColor("#FFD700") // Sarı Çerçeve
                 arrowPaint.style = Paint.Style.STROKE
-                arrowPaint.strokeWidth = 8f // Daha kalın beyaz çerçeve
+                arrowPaint.strokeWidth = 10f
                 arrowCanvas.drawPath(arrowPath, arrowPaint)
-                arrowPaint.color = android.graphics.Color.parseColor("#007AFF")
+                arrowPaint.color = android.graphics.Color.parseColor("#00008B") // Koyu Mavi İç
                 arrowPaint.style = Paint.Style.FILL
                 arrowCanvas.drawPath(arrowPath, arrowPaint)
                 

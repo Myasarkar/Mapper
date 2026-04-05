@@ -67,8 +67,13 @@ class NetworkMonitor(private val context: Context) {
 
         if (nrCell != null) {
             val band = nrCell.band?.number ?: 0
-            // NetMonster'ın kendi tiplerini kullanarak daha kesin sonuç alalım
-            val isSA = networkType is cz.mroczis.netmonster.core.model.network.NetworkType.NrSa
+            
+            // SA/NSA tespiti için en garantili yöntem: 
+            // Eğer şebeke tipi NrSa değilse veya içinde "Nsa" geçiyorsa kesinlikle NSA'dir.
+            val networkTypeStr = networkType.toString()
+            val isSA = networkType is cz.mroczis.netmonster.core.model.network.NetworkType.NrSa && 
+                      !networkTypeStr.contains("Nsa", ignoreCase = true)
+            
             _currentBand.value = BandInfo.NR(band, isSA)
             return
         }
