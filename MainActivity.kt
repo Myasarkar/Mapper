@@ -33,6 +33,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -183,31 +184,45 @@ class MainActivity : ComponentActivity() {
         val scope = rememberCoroutineScope()
         
         // Debug Modülü
-        var debugClickCount by remember { mutableStateOf(0) }
-        var showDebugDialog by remember { mutableStateOf(false) }
-        var lastClickTime by remember { mutableStateOf(0L) }
+        var showDebugView by remember { mutableStateOf(false) }
 
-        if (showDebugDialog) {
-            AlertDialog(
-                onDismissRequest = { showDebugDialog = false },
-                title = { Text("Hata Ayıklama Logları") },
-                text = {
-                    Box(modifier = Modifier.height(400.dp).fillMaxWidth()) {
-                        androidx.compose.foundation.lazy.LazyColumn {
-                            items(LogManager.logs.size) { index ->
-                                Text(LogManager.logs[LogManager.logs.size - 1 - index], fontSize = 10.sp)
-                                HorizontalDivider()
+        if (showDebugView) {
+            Surface(
+                modifier = Modifier.fillMaxSize().zIndex(100f),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Sistem Logları", style = MaterialTheme.typography.headlineSmall)
+                        Row {
+                            Button(onClick = { LogManager.clear() }, modifier = Modifier.padding(end = 8.dp)) {
+                                Text("Temizle")
+                            }
+                            Button(onClick = { showDebugView = false }) {
+                                Text("Kapat")
                             }
                         }
                     }
-                },
-                confirmButton = {
-                    Button(onClick = { LogManager.clear() }) { Text("Temizle") }
-                },
-                dismissButton = {
-                    Button(onClick = { showDebugDialog = false }) { Text("Kapat") }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Box(modifier = Modifier.weight(1f).fillMaxWidth().background(Color.Black.copy(alpha = 0.05f)).padding(8.dp)) {
+                        androidx.compose.foundation.lazy.LazyColumn {
+                            items(LogManager.logs.size) { index ->
+                                Text(
+                                    LogManager.logs[LogManager.logs.size - 1 - index],
+                                    fontSize = 11.sp,
+                                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                                    color = MaterialTheme.colorScheme.onBackground
+                                )
+                                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                            }
+                        }
+                    }
                 }
-            )
+            }
         }
 
         // Ekranı Açık Tutma (Mapping Aktifken)
@@ -331,26 +346,29 @@ class MainActivity : ComponentActivity() {
             topBar = {
                 TopAppBar(
                     modifier = Modifier.statusBarsPadding(),
+                    navigationIcon = {
+                        IconButton(onClick = { showDebugView = true }) {
+                            Icon(Icons.Filled.BugReport, contentDescription = "Loglar")
+                        }
+                    },
                     title = { 
-                        Text(
-                            "5G Band Mapper", 
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.clickable {
-                                val now = System.currentTimeMillis()
-                                if (now - lastClickTime < 1000) {
-                                    debugClickCount++
-                                    if (debugClickCount >= 5) {
-                                        showDebugDialog = true
-                                        debugClickCount = 0
-                                    }
-                                } else {
-                                    debugClickCount = 1
-                                }
-                                lastClickTime = now
-                            }
-                        ) 
+                        Column {
+                            Text(
+                                "5G Band Mapper", 
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                "Build: 2026-04-05 07:54", 
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Normal,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     },
                     actions = {
+                        TextButton(onClick = { showDebugView = true }) {
+                            Text("LOGLAR", color = MaterialTheme.colorScheme.primary)
+                        }
                         IconButton(onClick = { 
                             isMappingActive.value = !isMappingActive.value 
                             LogManager.log("Mapping Button Clicked: New State = ${isMappingActive.value}")
@@ -376,6 +394,22 @@ class MainActivity : ComponentActivity() {
                 }) {
                     Icon(Icons.Filled.LocationOn, contentDescription = "Konumum")
                 }
+            },
+            bottomBar = {
+                Surface(
+                    modifier = Modifier.fillMaxWidth().height(60.dp),
+                    color = Color.Black.copy(alpha = 0.7f)
+                ) {
+                    Column(modifier = Modifier.padding(8.dp)) {
+                        val lastLogs = LogManager.logs.takeLast(2)
+                        lastLogs.forEach { log ->
+                            Text(log, color = Color.White, fontSize = 9.sp, maxLines = 1)
+                        }
+                        if (lastLogs.isEmpty()) {
+                            Text("Log bekliyor...", color = Color.Gray, fontSize = 9.sp)
+                        }
+                    }
+                }
             }
         ) { padding ->
             Box(modifier = Modifier.padding(padding).fillMaxSize()) {
@@ -388,6 +422,20 @@ class MainActivity : ComponentActivity() {
                         .align(Alignment.TopCenter)
                         .zIndex(1f) // Haritanın üstünde kalmasını garanti et
                 ) {
+                    // BUILD UPDATED Mesajı
+                    Surface(
+                        modifier = Modifier.padding(top = 8.dp).align(Alignment.CenterHorizontally),
+                        color = Color.Red,
+                        shape = CircleShape
+                    ) {
+                        Text(
+                            "BUILD UPDATED: 07:58", 
+                            color = Color.White, 
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                    }
                     BandIndicator(bandInfo)
                     if (!isMapping) {
                         Card(
