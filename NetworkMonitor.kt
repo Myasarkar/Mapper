@@ -67,9 +67,8 @@ class NetworkMonitor(private val context: Context) {
 
         if (nrCell != null) {
             val band = nrCell.band?.number ?: 0
-            // "Sa" kontrolünü daha hassas yapalım, "Nsa" içinde de "sa" geçtiği için karışıklık olabiliyor
-            val isSA = networkTypeStr.contains("NrSa", ignoreCase = true) || 
-                      (networkTypeStr.contains("Sa", ignoreCase = true) && !networkTypeStr.contains("Nsa", ignoreCase = true))
+            // NetMonster'ın kendi tiplerini kullanarak daha kesin sonuç alalım
+            val isSA = networkType is cz.mroczis.netmonster.core.model.network.NetworkType.NrSa
             _currentBand.value = BandInfo.NR(band, isSA)
             return
         }
